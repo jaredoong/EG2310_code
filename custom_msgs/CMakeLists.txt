@@ -23,6 +23,9 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Nfc.msg"
+  "msg/Button.msg"
+  "msg/Thermal.msg"
+  "msg/Launcher.msg"
 )
 
 if(BUILD_TESTING)
