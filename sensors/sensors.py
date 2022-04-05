@@ -17,6 +17,7 @@ right_flywheel_pin = 26
 servo_pin = 23
 
 NUM_BALLS = 3
+TOTAL_NFC = 1 # number of detectable NFC in maze
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(button_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP) # Set pin 10 to be an input pin and set initial value to be pulled low (off)
@@ -55,6 +56,7 @@ class NFCFinder(Node):
             
             msg = Nfc()
             self.nfc_found = False
+            num_nfc_found = 0
 
             #self.get_logger().info('Beginning while loop')
             while True:
@@ -62,14 +64,23 @@ class NFCFinder(Node):
                 uid = pn532.read_passive_target(timeout=0.5)
                 
                 self.publisher_.publish(msg)
+                self.get_logger().info("Num of NFC found: %i" % num_nfc_found)
                 # Try again if no card is available.
                 if uid is None:
                     self.get_logger().info('NFC not found')
                     continue
                 self.get_logger().info('NFC found')
                 msg.nfc_found = True
+                num_nfc_found += 1
                 self.publisher_.publish(msg)
-                break
+                msg.nfc_found = False
+                self.publisher_.publish(msg)
+                time.sleep(2.0)
+
+                if num_nfc_found > TOTAL_NFC:
+                    break
+                # let bot pass NFC to prevent double counting
+                
                 #self.get_logger().info('NFC found is %s' % msg.nfc_found)
                 
         except Exception as e:
@@ -185,10 +196,10 @@ class ThermalPhase(Node):
 
             # start the flywheels up once ready
             #self.get_logger().info("Starting up the flywheels")
-            #GPIO.output(left_flywheel_pin, 1)
-            #GPIO.output(right_flywheel_pin, 1)
+            GPIO.output(left_flywheel_pin, 1)
+            GPIO.output(right_flywheel_pin, 1)
             # let the flywheel ramp up before starting servo
-            time.sleep(0.5)
+            time.sleep(0.2)
 
             # launch the ball with interval of 1 second
             while self.num_balls > 0:
@@ -204,10 +215,10 @@ class ThermalPhase(Node):
                 # updates whether done launching
                 self.launcher_callback()
             
-            self.get_logger().info("Done firing all balls")
             # Off the flywheel
             GPIO.output(left_flywheel_pin, 0)
             GPIO.output(right_flywheel_pin, 0)
+            self.get_logger().info("Done firing all balls")
 
         except Exception as e:
             print(e)
